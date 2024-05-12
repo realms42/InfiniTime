@@ -6,14 +6,13 @@
 
 using namespace Pinetime::Drivers;
 
-St7789::St7789(Spi& spi, uint8_t pinDataCommand) : spi {spi}, pinDataCommand {pinDataCommand} {
+St7789::St7789(Spi& spi, uint8_t pinDataCommand, uint8_t pinReset) : spi {spi}, pinDataCommand {pinDataCommand}, pinReset {pinReset} {
 }
 
 void St7789::Init() {
-  spi.Init();
   nrf_gpio_cfg_output(pinDataCommand);
-  nrf_gpio_cfg_output(26);
-  nrf_gpio_pin_set(26);
+  nrf_gpio_cfg_output(pinReset);
+  nrf_gpio_pin_set(pinReset);
   HardwareReset();
   SoftwareReset();
   SleepOut();
@@ -141,16 +140,6 @@ void St7789::DisplayOff() {
   nrf_delay_ms(500);
 }
 
-void St7789::VerticalScrollDefinition(uint16_t topFixedLines, uint16_t scrollLines, uint16_t bottomFixedLines) {
-  WriteCommand(static_cast<uint8_t>(Commands::VerticalScrollDefinition));
-  WriteData(topFixedLines >> 8u);
-  WriteData(topFixedLines & 0x00ffu);
-  WriteData(scrollLines >> 8u);
-  WriteData(scrollLines & 0x00ffu);
-  WriteData(bottomFixedLines >> 8u);
-  WriteData(bottomFixedLines & 0x00ffu);
-}
-
 void St7789::VerticalScrollStartAddress(uint16_t line) {
   verticalScrollingStartAddress = line;
   WriteCommand(static_cast<uint8_t>(Commands::VerticalScrollStartAddress));
@@ -161,17 +150,6 @@ void St7789::VerticalScrollStartAddress(uint16_t line) {
 void St7789::Uninit() {
 }
 
-void St7789::DrawPixel(uint16_t x, uint16_t y, uint32_t color) {
-  if (x >= Width || y >= Height) {
-    return;
-  }
-
-  SetAddrWindow(x, y, x + 1, y + 1);
-
-  nrf_gpio_pin_set(pinDataCommand);
-  WriteSpi(reinterpret_cast<const uint8_t*>(&color), 2);
-}
-
 void St7789::DrawBuffer(uint16_t x, uint16_t y, uint16_t width, uint16_t height, const uint8_t* data, size_t size) {
   SetAddrWindow(x, y, x + width - 1, y + height - 1);
   nrf_gpio_pin_set(pinDataCommand);
@@ -179,9 +157,9 @@ void St7789::DrawBuffer(uint16_t x, uint16_t y, uint16_t width, uint16_t height,
 }
 
 void St7789::HardwareReset() {
-  nrf_gpio_pin_clear(26);
+  nrf_gpio_pin_clear(pinReset);
   nrf_delay_ms(10);
-  nrf_gpio_pin_set(26);
+  nrf_gpio_pin_set(pinReset);
 }
 
 void St7789::Sleep() {
